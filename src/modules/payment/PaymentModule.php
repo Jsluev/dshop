@@ -58,6 +58,7 @@ class PaymentModule extends BaseModule
     public function registerHooks(): void
     {
         add_action('admin_menu', [$this, 'addAdminMenus']);
+        add_action('admin_init', [$this, 'handlePaymentForm']);
 
         // AJAX handlers
         add_action('wp_ajax_dshop_process_payment', [$this, 'ajaxProcessPayment']);
@@ -88,28 +89,41 @@ class PaymentModule extends BaseModule
     }
 
     /**
+     * Handle payment form submission (admin_init)
+     */
+    public function handlePaymentForm(): void
+    {
+        if (!isset($_POST['dshop_save_payment'])) {
+            return;
+        }
+        if (!wp_verify_nonce($_POST['_wpnonce'] ?? '', 'dshop_payment_save')) {
+            return;
+        }
+
+        $settings = [
+            'active_gateway' => sanitize_text_field($_POST['active_gateway'] ?? ''),
+            'yookassa_shop_id' => sanitize_text_field($_POST['yookassa_shop_id'] ?? ''),
+            'yookassa_secret_key' => sanitize_text_field($_POST['yookassa_secret_key'] ?? ''),
+            'yookassa_enabled' => isset($_POST['yookassa_enabled']) ? 1 : 0,
+            'cloudpayments_public_id' => sanitize_text_field($_POST['cloudpayments_public_id'] ?? ''),
+            'cloudpayments_api_key' => sanitize_text_field($_POST['cloudpayments_api_key'] ?? ''),
+            'cloudpayments_enabled' => isset($_POST['cloudpayments_enabled']) ? 1 : 0,
+            'free_enabled' => isset($_POST['free_enabled']) ? 1 : 0,
+            'free_title' => sanitize_text_field($_POST['free_title'] ?? 'Оплата при получении'),
+        ];
+        update_option('dshop_payment_settings', $settings);
+
+        wp_redirect(admin_url('admin.php?page=dshop-payment&updated=1'));
+        exit;
+    }
+
+    /**
      * Render payment settings page
      *
      * @return void
      */
     public function renderPaymentPage(): void
     {
-        if (isset($_POST['dshop_save_payment']) && check_admin_referer('dshop_payment_save')) {
-            $settings = [
-                'active_gateway' => sanitize_text_field($_POST['active_gateway'] ?? ''),
-                'yookassa_shop_id' => sanitize_text_field($_POST['yookassa_shop_id'] ?? ''),
-                'yookassa_secret_key' => sanitize_text_field($_POST['yookassa_secret_key'] ?? ''),
-                'yookassa_enabled' => isset($_POST['yookassa_enabled']) ? 1 : 0,
-                'cloudpayments_public_id' => sanitize_text_field($_POST['cloudpayments_public_id'] ?? ''),
-                'cloudpayments_api_key' => sanitize_text_field($_POST['cloudpayments_api_key'] ?? ''),
-                'cloudpayments_enabled' => isset($_POST['cloudpayments_enabled']) ? 1 : 0,
-                'free_enabled' => isset($_POST['free_enabled']) ? 1 : 0,
-                'free_title' => sanitize_text_field($_POST['free_title'] ?? 'Оплата при получении'),
-            ];
-            update_option('dshop_payment_settings', $settings);
-            echo '<div class="notice notice-success"><p>Настройки оплаты сохранены.</p></div>';
-        }
-
         $settings = get_option('dshop_payment_settings', [
             'active_gateway' => 'free',
             'yookassa_shop_id' => '',

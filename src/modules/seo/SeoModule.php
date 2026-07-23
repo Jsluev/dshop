@@ -70,6 +70,7 @@ class SeoModule extends BaseModule
         if (is_admin()) {
             add_action('add_meta_boxes', [$this, 'addSeoMetaBoxes']);
             add_action('save_post_dshop_product', [$this, 'saveProductSeo'], 10, 2);
+            add_action('admin_init', [$this, 'handleSeoSettingsForm']);
         }
     }
 
@@ -85,21 +86,34 @@ class SeoModule extends BaseModule
         );
     }
 
-    public function renderSeoSettingsPage(): void
+    /**
+     * Handle SEO settings form submission (admin_init)
+     */
+    public function handleSeoSettingsForm(): void
     {
-        if (isset($_POST['dshop_save_seo']) && check_admin_referer('dshop_seo_save')) {
-            $settings = [
-                'meta_title_template' => sanitize_text_field($_POST['meta_title_template'] ?? '{product_name} — {site_name}'),
-                'meta_description_template' => sanitize_textarea_field($_POST['meta_description_template'] ?? '{product_excerpt}'),
-                'enable_schema' => isset($_POST['enable_schema']) ? 1 : 0,
-                'enable_breadcrumbs' => isset($_POST['enable_breadcrumbs']) ? 1 : 0,
-                'enable_sitemap' => isset($_POST['enable_sitemap']) ? 1 : 0,
-                'og_image_default' => esc_url_raw($_POST['og_image_default'] ?? ''),
-            ];
-            update_option('dshop_seo_settings', $settings);
-            echo '<div class="notice notice-success"><p>Настройки SEO сохранены.</p></div>';
+        if (!isset($_POST['dshop_save_seo'])) {
+            return;
+        }
+        if (!wp_verify_nonce($_POST['_wpnonce'] ?? '', 'dshop_seo_save')) {
+            return;
         }
 
+        $settings = [
+            'meta_title_template' => sanitize_text_field($_POST['meta_title_template'] ?? '{product_name} — {site_name}'),
+            'meta_description_template' => sanitize_textarea_field($_POST['meta_description_template'] ?? '{product_excerpt}'),
+            'enable_schema' => isset($_POST['enable_schema']) ? 1 : 0,
+            'enable_breadcrumbs' => isset($_POST['enable_breadcrumbs']) ? 1 : 0,
+            'enable_sitemap' => isset($_POST['enable_sitemap']) ? 1 : 0,
+            'og_image_default' => esc_url_raw($_POST['og_image_default'] ?? ''),
+        ];
+        update_option('dshop_seo_settings', $settings);
+
+        wp_redirect(admin_url('admin.php?page=dshop-seo&updated=1'));
+        exit;
+    }
+
+    public function renderSeoSettingsPage(): void
+    {
         $settings = get_option('dshop_seo_settings', [
             'meta_title_template' => '{product_name} — {site_name}',
             'meta_description_template' => '{product_excerpt}',

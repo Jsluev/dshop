@@ -58,6 +58,7 @@ class ShippingModule extends BaseModule
     public function registerHooks(): void
     {
         add_action('admin_menu', [$this, 'addAdminMenus']);
+        add_action('admin_init', [$this, 'handleShippingForm']);
 
         // AJAX handlers
         add_action('wp_ajax_dshop_calculate_shipping', [$this, 'ajaxCalculateShipping']);
@@ -79,29 +80,42 @@ class ShippingModule extends BaseModule
         );
     }
 
-    public function renderShippingPage(): void
+    /**
+     * Handle shipping form submission (admin_init)
+     */
+    public function handleShippingForm(): void
     {
-        if (isset($_POST['dshop_save_shipping']) && check_admin_referer('dshop_shipping_save')) {
-            $settings = [
-                'pickup_enabled' => isset($_POST['pickup_enabled']) ? 1 : 0,
-                'pickup_title' => sanitize_text_field($_POST['pickup_title'] ?? 'Самовывоз'),
-                'pickup_address' => sanitize_textarea_field($_POST['pickup_address'] ?? ''),
-                'pickup_cost' => floatval($_POST['pickup_cost'] ?? 0),
-                'city_enabled' => isset($_POST['city_enabled']) ? 1 : 0,
-                'city_title' => sanitize_text_field($_POST['city_title'] ?? 'Городская транспортная компания'),
-                'city_cost' => floatval($_POST['city_cost'] ?? 0),
-                'city_free_from' => floatval($_POST['city_free_from'] ?? 0),
-                'cdek_enabled' => isset($_POST['cdek_enabled']) ? 1 : 0,
-                'cdek_title' => sanitize_text_field($_POST['cdek_title'] ?? 'СДЭК'),
-                'cdek_api_key' => sanitize_text_field($_POST['cdek_api_key'] ?? ''),
-                'cdek_api_secret' => sanitize_text_field($_POST['cdek_api_secret'] ?? ''),
-                'cdek_cost' => floatval($_POST['cdek_cost'] ?? 0),
-                'free_shipping_from' => floatval($_POST['free_shipping_from'] ?? 0),
-            ];
-            update_option('dshop_shipping_settings', $settings);
-            echo '<div class="notice notice-success"><p>Настройки доставки сохранены.</p></div>';
+        if (!isset($_POST['dshop_save_shipping'])) {
+            return;
+        }
+        if (!wp_verify_nonce($_POST['_wpnonce'] ?? '', 'dshop_shipping_save')) {
+            return;
         }
 
+        $settings = [
+            'pickup_enabled' => isset($_POST['pickup_enabled']) ? 1 : 0,
+            'pickup_title' => sanitize_text_field($_POST['pickup_title'] ?? 'Самовывоз'),
+            'pickup_address' => sanitize_textarea_field($_POST['pickup_address'] ?? ''),
+            'pickup_cost' => floatval($_POST['pickup_cost'] ?? 0),
+            'city_enabled' => isset($_POST['city_enabled']) ? 1 : 0,
+            'city_title' => sanitize_text_field($_POST['city_title'] ?? 'Городская транспортная компания'),
+            'city_cost' => floatval($_POST['city_cost'] ?? 0),
+            'city_free_from' => floatval($_POST['city_free_from'] ?? 0),
+            'cdek_enabled' => isset($_POST['cdek_enabled']) ? 1 : 0,
+            'cdek_title' => sanitize_text_field($_POST['cdek_title'] ?? 'СДЭК'),
+            'cdek_api_key' => sanitize_text_field($_POST['cdek_api_key'] ?? ''),
+            'cdek_api_secret' => sanitize_text_field($_POST['cdek_api_secret'] ?? ''),
+            'cdek_cost' => floatval($_POST['cdek_cost'] ?? 0),
+            'free_shipping_from' => floatval($_POST['free_shipping_from'] ?? 0),
+        ];
+        update_option('dshop_shipping_settings', $settings);
+
+        wp_redirect(admin_url('admin.php?page=dshop-shipping&updated=1'));
+        exit;
+    }
+
+    public function renderShippingPage(): void
+    {
         $settings = get_option('dshop_shipping_settings', [
             'pickup_enabled' => 1,
             'pickup_title' => 'Самовывоз',

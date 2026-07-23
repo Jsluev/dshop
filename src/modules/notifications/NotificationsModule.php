@@ -52,6 +52,7 @@ class NotificationsModule extends BaseModule
         // Admin hooks
         if (is_admin()) {
             add_action('admin_menu', [$this, 'addAdminMenus']);
+            add_action('admin_init', [$this, 'handleNotificationsForm']);
         }
 
         // Order notifications
@@ -80,13 +81,14 @@ class NotificationsModule extends BaseModule
     }
 
     /**
-     * Render notifications page
-     *
-     * @return void
+     * Handle notifications form submission (admin_init)
      */
-    public function renderNotificationsPage(): void
+    public function handleNotificationsForm(): void
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dshop_notifications_nonce'])) {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['dshop_notifications_nonce'])) {
+            return;
+        }
+        if (isset($_GET['page']) && $_GET['page'] === 'dshop-notifications') {
             check_admin_referer('dshop_notifications_nonce', 'dshop_notifications_nonce');
 
             $settings = [
@@ -107,7 +109,15 @@ class NotificationsModule extends BaseModule
             wp_redirect(admin_url('admin.php?page=dshop-notifications&updated=1'));
             exit;
         }
+    }
 
+    /**
+     * Render notifications page
+     *
+     * @return void
+     */
+    public function renderNotificationsPage(): void
+    {
         include DSHOP_SRC_DIR . 'modules/notifications/views/notifications-settings.php';
     }
 

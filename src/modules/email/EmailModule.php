@@ -52,6 +52,8 @@ class EmailModule extends BaseModule
         // Admin hooks
         if (is_admin()) {
             add_action('admin_menu', [$this, 'addAdminMenus']);
+            add_action('admin_init', [$this, 'handleEmailSettingsForm']);
+            add_action('admin_init', [$this, 'handleEmailTemplateForm']);
         }
 
         // Order status emails
@@ -89,13 +91,14 @@ class EmailModule extends BaseModule
     }
 
     /**
-     * Render email settings page
-     *
-     * @return void
+     * Handle email settings form submission (admin_init)
      */
-    public function renderEmailSettingsPage(): void
+    public function handleEmailSettingsForm(): void
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dshop_email_settings_nonce'])) {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['dshop_email_settings_nonce'])) {
+            return;
+        }
+        if (isset($_GET['page']) && $_GET['page'] === 'dshop-email-settings') {
             check_admin_referer('dshop_email_settings_nonce', 'dshop_email_settings_nonce');
 
             $settings = [
@@ -112,7 +115,40 @@ class EmailModule extends BaseModule
             wp_redirect(admin_url('admin.php?page=dshop-email-settings&updated=1'));
             exit;
         }
+    }
 
+    /**
+     * Handle email template form submission (admin_init)
+     */
+    public function handleEmailTemplateForm(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['dshop_email_template_nonce'])) {
+            return;
+        }
+        if (isset($_GET['page']) && $_GET['page'] === 'dshop-email-templates') {
+            check_admin_referer('dshop_email_template_nonce', 'dshop_email_template_nonce');
+
+            $template = sanitize_text_field($_POST['template'] ?? '');
+            $subject = sanitize_text_field($_POST['subject'] ?? '');
+            $body = wp_kses_post($_POST['body'] ?? '');
+
+            if ($template) {
+                update_option("dshop_email_template_{$template}_subject", $subject);
+                update_option("dshop_email_template_{$template}_body", $body);
+            }
+
+            wp_redirect(admin_url('admin.php?page=dshop-email-templates&updated=1'));
+            exit;
+        }
+    }
+
+    /**
+     * Render email settings page
+     *
+     * @return void
+     */
+    public function renderEmailSettingsPage(): void
+    {
         include DSHOP_SRC_DIR . 'modules/email/views/email-settings.php';
     }
 
@@ -132,23 +168,6 @@ class EmailModule extends BaseModule
             'password_reset' => 'Сброс пароля',
             'low_stock' => 'Уведомление о низком остатке',
         ];
-
-        // Handle template update
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dshop_email_template_nonce'])) {
-            check_admin_referer('dshop_email_template_nonce', 'dshop_email_template_nonce');
-
-            $template = sanitize_text_field($_POST['template'] ?? '');
-            $subject = sanitize_text_field($_POST['subject'] ?? '');
-            $body = wp_kses_post($_POST['body'] ?? '');
-
-            if ($template) {
-                update_option("dshop_email_template_{$template}_subject", $subject);
-                update_option("dshop_email_template_{$template}_body", $body);
-                
-                wp_redirect(admin_url('admin.php?page=dshop-email-templates&updated=1'));
-                exit;
-            }
-        }
 
         include DSHOP_SRC_DIR . 'modules/email/views/email-templates.php';
     }
