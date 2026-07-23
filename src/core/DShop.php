@@ -192,13 +192,14 @@ class DShop
         echo '<h1>DShop</h1>';
         echo '<p>Добро пожаловать в DShop — модульную систему электронной коммерции.</p>';
 
-        $modules = $this->getModules();
-        if (!empty($modules)) {
-            echo '<h2>Загруженные модули</h2>';
+        $loaded = $this->getModules();
+        $all = $this->loader->getModuleClasses();
+        if (!empty($all)) {
+            echo '<h2>Модули</h2>';
             echo '<table class="widefat fixed" style="max-width:800px">';
             echo '<thead><tr><th>Модуль</th><th>Статус</th></tr></thead><tbody>';
-            foreach ($modules as $name => $module) {
-                $active = $module->isActive();
+            foreach (array_keys($all) as $name) {
+                $active = isset($loaded[$name]);
                 $status = $active ? '<span style="color:green">Активен</span>' : '<span style="color:red">Отключён</span>';
                 echo '<tr><td>' . esc_html($name) . '</td><td>' . $status . '</td></tr>';
             }
