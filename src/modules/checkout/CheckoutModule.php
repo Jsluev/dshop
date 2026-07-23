@@ -63,6 +63,15 @@ class CheckoutModule extends BaseModule
     {
         add_submenu_page(
             'dshop',
+            'Заказы',
+            'Заказы',
+            'manage_options',
+            'dshop-orders',
+            [$this, 'renderOrdersPage']
+        );
+
+        add_submenu_page(
+            'dshop',
             'Настройки оформления заказа',
             'Оформление',
             'manage_options',
@@ -98,6 +107,95 @@ class CheckoutModule extends BaseModule
         ]);
 
         include DSHOP_SRC_DIR . 'modules/checkout/views/checkout-settings.php';
+    }
+
+    public function renderOrdersPage(): void
+    {
+        if (isset($_GET['id']) && absint($_GET['id'])) {
+            $this->renderOrderDetailPage();
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'dshop_orders';
+        $per_page = 20;
+        $current_page = max(1, absint($_GET['paged'] ?? 1));
+        $offset = ($current_page - 1) * $per_page;
+
+        if (isset($_GET['delete_id']) && absint($_GET['delete_id'])) {
+            $delete_id = absint($_GET['delete_id']);
+            if (isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'dshop_delete_order_' . $delete_id)) {
+                $wpdb->delete($table, ['id' => $delete_id], ['%d']);
+                $wpdb->delete($wpdb->prefix . 'dshop_order_items', ['order_id' => $delete_id], ['%d']);
+                wp_redirect(admin_url('admin.php?page=dshop-orders&deleted=1'));
+                exit;
+            }
+        }
+
+        $where = '1=1';
+        $params = [];
+
+        if (!empty($_GET['status'])) {
+            $status = sanitize_text_field($_GET['status']);
+            $where .= ' AND status = %s';
+            $params[] = $status;
+        }
+
+        if (!empty($_GET['search'])) {
+            $search = '%' . $wpdb->esc_like(sanitize_text_field($_GET['search'])) . '%';
+            $where .= ' AND (order_number LIKE %s OR billing_first_name LIKE %s OR billing_last_name LIKE %s OR billing_email LIKE %s)';
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+            $params[] = $search;
+        }
+
+        $count_query = "SELECT COUNT(*) FROM {$table} WHERE {$where}";
+        if (!empty($params)) {
+            $total = (int) $wpdb->get_var($wpdb->prepare($count_query, ...$params));
+        } else {
+            $total = (int) $wpdb->get_var($count_query);
+        }
+
+        $query = "SELECT * FROM {$table} WHERE {$where} ORDER BY id DESC LIMIT %d OFFSET %d";
+        $query_params = array_merge($params, [$per_page, $offset]);
+        $orders = $wpdb->get_results($wpdb->prepare($query, ...$query_params));
+
+        $total_pages = max(1, ceil($total / $per_page));
+
+        include DSHOP_SRC_DIR . 'modules/checkout/views/orders-list.php';
+    }
+
+    public function renderOrderDetailPage(): void
+    {
+        global $wpdb;
+        $order_id = absint($_GET['id']);
+        $table = $wpdb->prefix . 'dshop_orders';
+        $items_table = $wpdb->prefix . 'dshop_order_items';
+
+        $order = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $order_id));
+        if (!$order) {
+            echo '<div class="notice notice-error"><p>Заказ не найден.</p></div>';
+            return;
+        }
+
+        if (isset($_POST['dshop_update_order_status']) && check_admin_referer('dshop_order_status_' . $order_id)) {
+            $new_status = sanitize_text_field($_POST['order_status']);
+            $wpdb->update($table, ['status' => $new_status], ['id' => $order_id], ['%s'], ['%d']);
+            echo '<div class="notice notice-success"><p>Статус заказа обновлен.</p></div>';
+            $order->status = $new_status;
+        }
+
+        if (isset($_POST['dshop_save_admin_note']) && check_admin_referer('dshop_order_note_' . $order_id)) {
+            $note = sanitize_textarea_field($_POST['admin_note']);
+            $wpdb->update($table, ['admin_note' => $note], ['id' => $order_id], ['%s'], ['%d']);
+            echo '<div class="notice notice-success"><p>Примечание сохранено.</p></div>';
+            $order->admin_note = $note;
+        }
+
+        $items = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$items_table} WHERE order_id = %d", $order_id));
+
+        include DSHOP_SRC_DIR . 'modules/checkout/views/order-detail.php';
     }
 
     /**
@@ -435,28 +533,4 @@ class CheckoutModule extends BaseModule
         wp_mail($data['billing_email'], $customer_subject, $customer_message);
     }
 
-    /**
-     * Checkout shortcode
-     *
-     * @param array $atts Shortcode attributes
-     * @return string
-     */
-    public function checkoutShortcode(array $atts): string
-    {
-        ob_start();
-        
-        $cart_module = \DShop\Core\DShop::getInstance()->getModule('cart');
-        $cart = $cart_module->getCart();
-        
-        if ($cart->isEmpty()) {
-            echo '<div class="dshop-empty-state">';
-            echo '<h2>' . 'Ваша корзина пуста' . '</h2>';
-            echo '<a href="' . get_post_type_archive_link('dshop_product') . '" class="dshop-empty-state__button">' . 'Продолжить покупки' . '</a>';
-            echo '</div>';
-        } else {
-            include DSHOP_SRC_DIR . 'modules/checkout/views/checkout.php';
-        }
-        
-        return ob_get_clean();
-    }
 }

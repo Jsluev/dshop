@@ -94,29 +94,6 @@ class CatalogModule extends BaseModule
     }
 
     /**
-     * Hide internal DShop pages from the WP pages list
-     */
-    public function hideInternalPages(): void
-    {
-        $internal = [
-            absint(get_option('dshop_checkout_page_id')),
-        ];
-
-        $internal = array_filter($internal);
-
-        if (!empty($internal)) {
-            add_action('pre_get_posts', function($query) use ($internal) {
-                if (!is_admin() || !$query->is_main_query()) {
-                    return;
-                }
-                if ($query->get('post_type') === 'page' || $query->get('post_type') === '') {
-                    $query->set('post__not_in', array_merge($query->get('post__not_in', []), $internal));
-                }
-            });
-        }
-    }
-
-    /**
      * Load plugin templates for dshop pages
      */
     public function loadTemplates(string $template): string
@@ -384,28 +361,129 @@ class CatalogModule extends BaseModule
             'order' => 'DESC',
         ], $atts, 'dshop_products');
 
+        $filter_category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) : $atts['category'];
+        $filter_min_price = isset($_GET['min_price']) ? floatval($_GET['min_price']) : 0;
+        $filter_max_price = isset($_GET['max_price']) ? floatval($_GET['max_price']) : 0;
+        $filter_sort = isset($_GET['sort']) ? sanitize_text_field($_GET['sort']) : '';
+
+        switch ($filter_sort) {
+            case 'price_asc': $orderby = 'meta_value_num'; $order = 'ASC'; break;
+            case 'price_desc': $orderby = 'meta_value_num'; $order = 'DESC'; break;
+            case 'name': $orderby = 'title'; $order = 'ASC'; break;
+            default: $orderby = 'date'; $order = 'DESC'; break;
+        }
+
         $args = [
             'post_type' => 'dshop_product',
             'post_status' => 'publish',
             'posts_per_page' => intval($atts['limit']),
-            'orderby' => sanitize_text_field($atts['orderby']),
-            'order' => sanitize_text_field($atts['order']),
+            'orderby' => $orderby,
+            'order' => $order,
         ];
 
-        if (!empty($atts['category'])) {
+        if ($orderby === 'meta_value_num') {
+            $args['meta_key'] = '_dshop_price';
+        }
+
+        if (!empty($filter_category)) {
             $args['tax_query'] = [
                 [
                     'taxonomy' => 'dshop_product_cat',
                     'field' => 'slug',
-                    'terms' => sanitize_text_field($atts['category']),
+                    'terms' => $filter_category,
                 ],
             ];
+        }
+
+        if ($filter_min_price > 0 || $filter_max_price > 0) {
+            $args['meta_query'] = [];
+            if ($filter_min_price > 0) {
+                $args['meta_query'][] = [
+                    'key' => '_dshop_price',
+                    'value' => $filter_min_price,
+                    'compare' => '>=',
+                    'type' => 'NUMERIC',
+                ];
+            }
+            if ($filter_max_price > 0) {
+                $args['meta_query'][] = [
+                    'key' => '_dshop_price',
+                    'value' => $filter_max_price,
+                    'compare' => '<=',
+                    'type' => 'NUMERIC',
+                ];
+            }
         }
 
         $query = new \WP_Query($args);
         $columns = intval($atts['columns']);
 
+        $is_filtered = !empty($filter_category) || $filter_min_price > 0 || $filter_max_price > 0 || $filter_sort !== '';
+
         ob_start();
+
+        $categories = get_terms([
+            'taxonomy' => 'dshop_product_cat',
+            'hide_empty' => true,
+        ]);
+
+        $current_url = remove_query_arg(['category', 'min_price', 'max_price', 'sort', 'paged']);
+        ?>
+        <div class="dshop-catalog-filters">
+            <form class="dshop-catalog-filters__form" method="get" action="<?php echo esc_url($current_url); ?>">
+                <?php
+                $preserve_params = array_diff_key($_GET, array_flip(['category', 'min_price', 'max_price', 'sort', 'paged']));
+                foreach ($preserve_params as $key => $val) :
+                ?>
+                    <input type="hidden" name="<?php echo esc_attr($key); ?>" value="<?php echo esc_attr($val); ?>">
+                <?php endforeach; ?>
+
+                <div class="dshop-catalog-filters__group">
+                    <label for="dshop-filter-category">Категория</label>
+                    <select id="dshop-filter-category" name="category">
+                        <option value="">Все категории</option>
+                        <?php if (!is_wp_error($categories) && !empty($categories)) :
+                            foreach ($categories as $cat) : ?>
+                                <option value="<?php echo esc_attr($cat->slug); ?>" <?php selected($filter_category, $cat->slug); ?>><?php echo esc_html($cat->name); ?></option>
+                            <?php endforeach;
+                        endif; ?>
+                    </select>
+                </div>
+
+                <div class="dshop-catalog-filters__group">
+                    <label for="dshop-filter-min-price">Цена от</label>
+                    <input type="number" id="dshop-filter-min_price" name="min_price" min="0" step="1" placeholder="0" value="<?php echo $filter_min_price > 0 ? esc_attr($filter_min_price) : ''; ?>">
+                </div>
+
+                <div class="dshop-catalog-filters__group">
+                    <label for="dshop-filter-max-price">Цена до</label>
+                    <input type="number" id="dshop-filter-max_price" name="max_price" min="0" step="1" placeholder="∞" value="<?php echo $filter_max_price > 0 ? esc_attr($filter_max_price) : ''; ?>">
+                </div>
+
+                <div class="dshop-catalog-filters__group">
+                    <label for="dshop-filter-sort">Сортировка</label>
+                    <select id="dshop-filter-sort" name="sort">
+                        <option value="">По умолчанию</option>
+                        <option value="newest" <?php selected($filter_sort, 'newest'); ?>>Сначала новые</option>
+                        <option value="price_asc" <?php selected($filter_sort, 'price_asc'); ?>>Цена ↑</option>
+                        <option value="price_desc" <?php selected($filter_sort, 'price_desc'); ?>>Цена ↓</option>
+                        <option value="name" <?php selected($filter_sort, 'name'); ?>>По названию</option>
+                    </select>
+                </div>
+
+                <div class="dshop-catalog-filters__group">
+                    <button type="submit" class="dshop-add-to-cart__button" style="min-width:auto;padding:8px 20px;">Применить</button>
+                    <?php if ($is_filtered) : ?>
+                        <a href="<?php echo esc_url($current_url); ?>" style="font-size:13px;color:var(--ds-text-light);text-decoration:none;">Сбросить</a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </div>
+        <?php
+
+        if ($is_filtered) {
+            echo '<div class="dshop-catalog-results-count">Найдено товаров: ' . intval($query->found_posts) . '</div>';
+        }
 
         if ($query->have_posts()) {
             echo '<div class="dshop-products-grid" style="grid-template-columns: repeat(' . esc_attr($columns) . ', 1fr);">';
