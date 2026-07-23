@@ -361,7 +361,7 @@ class CatalogModule extends BaseModule
             'order' => 'DESC',
         ], $atts, 'dshop_products');
 
-        $filter_category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) : $atts['category'];
+        $filter_category = isset($_GET['category']) ? sanitize_title($_GET['category']) : $atts['category'];
         $filter_min_price = isset($_GET['min_price']) ? floatval($_GET['min_price']) : 0;
         $filter_max_price = isset($_GET['max_price']) ? floatval($_GET['max_price']) : 0;
         $filter_sort = isset($_GET['sort']) ? sanitize_text_field($_GET['sort']) : '';
