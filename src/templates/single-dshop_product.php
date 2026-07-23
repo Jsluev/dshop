@@ -151,7 +151,7 @@ $related_query = new WP_Query($related_args);
                         <input type="number" class="dshop-quantity__input" id="dshop-quantity" value="1" min="1" max="<?php echo $in_stock ? ($manage_stock ? $stock_quantity : 999) : 0; ?>" <?php echo !$in_stock ? 'disabled' : ''; ?>>
                         <button type="button" class="dshop-quantity__button dshop-quantity__button--plus">+</button>
                     </div>
-                    <button class="dshop-single__add-to-cart dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($product_id); ?>" <?php echo !$in_stock ? 'disabled' : ''; ?>>
+                    <button type="button" class="dshop-single__add-to-cart dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($product_id); ?>" <?php echo !$in_stock ? 'disabled' : ''; ?>>
                         <?php echo $in_stock ? 'В корзину' : 'Нет в наличии'; ?>
                     </button>
                 </div>
@@ -230,7 +230,7 @@ $related_query = new WP_Query($related_args);
                                     <?php endif; ?>
                                 </div>
                                 <div class="dshop-product-card__actions">
-                                    <button class="dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($rid); ?>">В корзину</button>
+                                    <button type="button" class="dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($rid); ?>">В корзину</button>
                                 </div>
                             </div>
                         </div>

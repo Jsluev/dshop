@@ -84,6 +84,7 @@
             e.preventDefault();
             var $button = $(e.currentTarget);
             var productId = $button.data('product-id');
+            if (!productId) return;
             var $qtyInput = $button.closest('.dshop-single__buy, .dshop-product-card__actions, .dshop-single__related')
                 .find('.dshop-quantity__input');
             var quantity = $qtyInput.length ? parseInt($qtyInput.val()) || 1 : 1;

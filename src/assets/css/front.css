@@ -1469,6 +1469,20 @@ body.dshop-page {
     border-color: var(--ds-primary);
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
+.dshop-catalog-filters__submit {
+    padding: 8px 20px;
+    background: var(--ds-primary);
+    color: var(--ds-white);
+    border: none;
+    border-radius: var(--ds-radius);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.dshop-catalog-filters__submit:hover {
+    background: var(--ds-primary-dark);
+}
 .dshop-catalog-results-count {
     margin-bottom: 16px;
     font-size: 14px;

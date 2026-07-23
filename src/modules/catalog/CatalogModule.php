@@ -472,7 +472,7 @@ class CatalogModule extends BaseModule
                 </div>
 
                 <div class="dshop-catalog-filters__group">
-                    <button type="submit" class="dshop-add-to-cart__button" style="min-width:auto;padding:8px 20px;">Применить</button>
+                    <button type="submit" class="dshop-catalog-filters__submit" style="min-width:auto;padding:8px 20px;">Применить</button>
                     <?php if ($is_filtered) : ?>
                         <a href="<?php echo esc_url($current_url); ?>" style="font-size:13px;color:var(--ds-text-light);text-decoration:none;">Сбросить</a>
                     <?php endif; ?>
@@ -528,7 +528,7 @@ class CatalogModule extends BaseModule
                             <?php endif; ?>
                         </div>
                         <div class="dshop-product-card__actions">
-                            <button class="dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
+                            <button type="button" class="dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($product_id); ?>">В корзину</button>
                         </div>
                     </div>
                 </div>
@@ -632,7 +632,7 @@ class CatalogModule extends BaseModule
                         <input type="number" class="dshop-quantity__input" name="quantity" value="1" min="1" <?php echo $stock_status === 'out_of_stock' ? 'max="0"' : ''; ?>>
                         <button type="button" class="dshop-quantity__button dshop-quantity__button--plus">+</button>
                     </div>
-                    <button class="dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($product_id); ?>" <?php echo $stock_status === 'out_of_stock' ? 'disabled' : ''; ?>>
+                    <button type="button" class="dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($product_id); ?>" <?php echo $stock_status === 'out_of_stock' ? 'disabled' : ''; ?>>
                         <?php echo $stock_status === 'out_of_stock' ? 'Нет в наличии' : 'В корзину'; ?>
                     </button>
                 </div>

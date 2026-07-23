@@ -62,7 +62,7 @@ defined('ABSPATH') || exit;
                                 <?php endif; ?>
                             </div>
                             <div class="dshop-product-card__actions">
-                                <button class="dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($pid); ?>">В корзину</button>
+                                <button type="button" class="dshop-add-to-cart__button" data-product-id="<?php echo esc_attr($pid); ?>">В корзину</button>
                             </div>
                         </div>
                     </div>
