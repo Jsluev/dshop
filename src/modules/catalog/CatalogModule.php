@@ -180,9 +180,8 @@ class CatalogModule extends BaseModule
                 'view_item' => 'Просмотреть заказ',
             ],
             'public' => false,
-            'show_ui' => true,
-            'show_in_menu' => 'dshop',
-            'menu_icon' => 'dashicons-money-alt',
+            'show_ui' => false,
+            'show_in_menu' => false,
             'supports' => ['title', 'custom-fields'],
             'capability_type' => 'post',
         ]);
