@@ -150,6 +150,7 @@ body.dshop-page {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+    margin-bottom: 20px;
 }
 
 .dshop-single__breadcrumbs a,
@@ -189,7 +190,7 @@ body.dshop-page {
 }
 
 .dshop-archive__header {
-    margin-bottom: 24px;
+    margin-bottom: 32px;
 }
 
 .dshop-archive__title {
@@ -215,7 +216,7 @@ body.dshop-page {
 }
 
 .dshop-product-card__image {
-    aspect-ratio: 4/3;
+    aspect-ratio: 1/1;
     overflow: hidden;
     background: var(--ds-bg);
     display: flex;

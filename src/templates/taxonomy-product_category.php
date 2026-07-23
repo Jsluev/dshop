@@ -8,6 +8,8 @@ defined('ABSPATH') || exit;
 $taxonomy = get_queried_object();
 $term_name = $taxonomy->name ?? 'Каталог';
 $term_description = $taxonomy->description ?? '';
+global $wp_query;
+$max_num_pages = $wp_query->max_num_pages;
 ?>
 <!DOCTYPE html>
 <html lang="ru">
