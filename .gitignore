@@ -1,0 +1,53 @@
+# Composer
+/vendor/
+composer.lock
+
+# IDE
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# WordPress
+wp-config.php
+/wp-content/uploads/
+/wp-content/cache/
+
+# Logs
+/logs/
+*.log
+
+# Node
+/node_modules/
+package-lock.json
+
+# Build
+/dist/
+/build/
+*.min.css
+*.min.js
+
+# Tests
+/coverage/
+/.phpunit.result.cache
+
+# Environment
+.env
+.env.local
+.env.production
+
+# DShop specific
+/logs/dshop.log
+*.cache
+
+# Docker plugin copy (synced from src/)
+/plugins/dshop/
+
+# Temp / scratch files
+/create-repo.json
