@@ -55,6 +55,7 @@ class EmailModule extends BaseModule
         }
 
         // Order status emails
+        add_action('dshop/order/created', [$this, 'onOrderCreated'], 10, 2);
         add_action('dshop/order/status_changed', [$this, 'onOrderStatusChanged'], 10, 3);
 
         // Customer registration email
@@ -150,6 +151,30 @@ class EmailModule extends BaseModule
         }
 
         include DSHOP_SRC_DIR . 'modules/email/views/email-templates.php';
+    }
+
+    /**
+     * On order created
+     *
+     * @param int $order_id Order ID
+     * @param array $data Order data
+     * @return void
+     */
+    public function onOrderCreated(int $order_id, array $data): void
+    {
+        global $wpdb;
+
+        $order = $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM {$wpdb->prefix}dshop_orders WHERE id = %d", $order_id)
+        );
+
+        if (!$order) {
+            return;
+        }
+
+        $this->sendEmail($order->billing_email, sprintf('Подтверждение заказа #%s', $order->order_number), 'order_confirmation', [
+            'order' => $order,
+        ]);
     }
 
     /**

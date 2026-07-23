@@ -53,6 +53,7 @@ class CrmModule extends BaseModule
         if (is_admin()) {
             add_action('admin_menu', [$this, 'addAdminMenus']);
             add_action('add_meta_boxes', [$this, 'addMetaBoxes']);
+            add_action('admin_init', [$this, 'handleCustomerGroupForm']);
         }
 
         // Order creation
@@ -159,21 +160,20 @@ class CrmModule extends BaseModule
     }
 
     /**
-     * Render customer groups page
-     *
-     * @return void
+     * Handle customer group form submission (runs on admin_init before output)
      */
-    public function renderCustomerGroupsPage(): void
+    public function handleCustomerGroupForm(): void
     {
-        global $wpdb;
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['dshop_group_nonce'])) {
+            return;
+        }
 
-        $table = $wpdb->prefix . 'dshop_customer_groups';
-        $groups = $wpdb->get_results("SELECT * FROM {$table} ORDER BY name");
-
-        // Handle form submission
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dshop_group_nonce'])) {
+        if (isset($_GET['page']) && $_GET['page'] === 'dshop-customer-groups') {
             check_admin_referer('dshop_group_nonce', 'dshop_group_nonce');
-            
+
+            global $wpdb;
+            $table = $wpdb->prefix . 'dshop_customer_groups';
+
             $name = sanitize_text_field($_POST['name'] ?? '');
             $discount = floatval($_POST['discount'] ?? 0);
 
@@ -196,11 +196,24 @@ class CrmModule extends BaseModule
                         ]
                     );
                 }
-                
+
                 wp_redirect(admin_url('admin.php?page=dshop-customer-groups&updated=1'));
                 exit;
             }
         }
+    }
+
+    /**
+     * Render customer groups page
+     *
+     * @return void
+     */
+    public function renderCustomerGroupsPage(): void
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'dshop_customer_groups';
+        $groups = $wpdb->get_results("SELECT * FROM {$table} ORDER BY name");
 
         include DSHOP_SRC_DIR . 'modules/crm/views/customer-groups.php';
     }

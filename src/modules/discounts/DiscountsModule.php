@@ -49,15 +49,38 @@ class DiscountsModule extends BaseModule
      */
     public function registerHooks(): void
     {
+        add_action('init', [$this, 'registerPostTypes']);
+
         // Admin hooks
         if (is_admin()) {
             add_action('admin_menu', [$this, 'addAdminMenus']);
             add_action('add_meta_boxes', [$this, 'addMetaBoxes']);
             add_action('save_post_dshop_coupon', [$this, 'saveCoupon'], 10, 2);
+            add_action('transition_post_status', [$this, 'onCouponStatusChange'], 10, 3);
         }
 
         // Apply product discounts
         add_filter('dshop/product/price', [$this, 'applyProductDiscount'], 10, 2);
+    }
+
+    public function registerPostTypes(): void
+    {
+        register_post_type('dshop_coupon', [
+            'labels' => [
+                'name' => 'Купоны',
+                'singular_name' => 'Купон',
+                'add_new_item' => 'Добавить купон',
+                'edit_item' => 'Редактировать купон',
+                'all_items' => 'Все купоны',
+                'search_items' => 'Поиск купонов',
+                'not_found' => 'Купонов не найдено',
+            ],
+            'public' => false,
+            'show_ui' => true,
+            'show_in_menu' => false,
+            'supports' => ['title'],
+            'capability_type' => 'post',
+        ]);
     }
 
     /**
@@ -221,9 +244,70 @@ class DiscountsModule extends BaseModule
             }
         }
 
-        // Update used count from postmeta (tracked when coupon is applied)
         $used_count = (int) get_post_meta($post_id, '_dshop_coupon_used_count', true);
         update_post_meta($post_id, '_dshop_coupon_used_count', $used_count);
+
+        $this->syncCouponToTable($post_id);
+    }
+
+    /**
+     * Sync coupon data from postmeta to the dshop_coupons table
+     */
+    private function syncCouponToTable(int $post_id): void
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'dshop_coupons';
+        $code = get_post_meta($post_id, '_dshop_coupon_code', true);
+        if (!$code) {
+            return;
+        }
+
+        $data = [
+            'code' => $code,
+            'type' => get_post_meta($post_id, '_dshop_coupon_type', true) ?: 'percent',
+            'amount' => floatval(get_post_meta($post_id, '_dshop_coupon_amount', true)),
+            'minimum_spend' => floatval(get_post_meta($post_id, '_dshop_coupon_minimum_spend', true)),
+            'maximum_spend' => floatval(get_post_meta($post_id, '_dshop_coupon_maximum_spend', true)),
+            'usage_limit' => intval(get_post_meta($post_id, '_dshop_coupon_usage_limit', true)) ?: null,
+            'used_count' => intval(get_post_meta($post_id, '_dshop_coupon_used_count', true)),
+            'exclude_sale_items' => intval(get_post_meta($post_id, '_dshop_coupon_exclude_sale_items', true)),
+            'expires_at' => get_post_meta($post_id, '_dshop_coupon_expires_at', true) ?: null,
+            'status' => get_post_status($post_id) === 'publish' ? 'active' : 'inactive',
+        ];
+
+        $existing = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$table} WHERE code = %s", $code));
+
+        if ($existing) {
+            $wpdb->update($table, $data, ['code' => $code]);
+        } else {
+            $wpdb->insert($table, $data);
+        }
+    }
+
+    /**
+     * Sync coupon status when post status changes
+     */
+    public function onCouponStatusChange(string $new_status, string $old_status, \WP_Post $post): void
+    {
+        if ($post->post_type !== 'dshop_coupon') {
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'dshop_coupons';
+        $code = get_post_meta($post->ID, '_dshop_coupon_code', true);
+
+        if (!$code) {
+            return;
+        }
+
+        $status = $new_status === 'publish' ? 'active' : 'inactive';
+        $existing = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$table} WHERE code = %s", $code));
+
+        if ($existing) {
+            $wpdb->update($table, ['status' => $status], ['code' => $code]);
+        }
     }
 
     /**
@@ -289,10 +373,26 @@ class DiscountsModule extends BaseModule
      */
     public function renderCouponsPage(): void
     {
-        global $wpdb;
+        $coupons_query = new \WP_Query([
+            'post_type' => 'dshop_coupon',
+            'posts_per_page' => 50,
+            'orderby' => 'date',
+            'order' => 'DESC',
+        ]);
 
-        $table = $wpdb->prefix . 'dshop_coupons';
-        $coupons = $wpdb->get_results("SELECT * FROM {$table} ORDER BY created_at DESC");
+        $coupons = [];
+        foreach ($coupons_query->posts as $post) {
+            $obj = new \stdClass();
+            $obj->id = $post->ID;
+            $obj->code = get_post_meta($post->ID, '_dshop_coupon_code', true);
+            $obj->type = get_post_meta($post->ID, '_dshop_coupon_type', true) ?: 'percent';
+            $obj->amount = floatval(get_post_meta($post->ID, '_dshop_coupon_amount', true));
+            $obj->used_count = intval(get_post_meta($post->ID, '_dshop_coupon_used_count', true));
+            $obj->usage_limit = intval(get_post_meta($post->ID, '_dshop_coupon_usage_limit', true)) ?: null;
+            $obj->expires_at = get_post_meta($post->ID, '_dshop_coupon_expires_at', true);
+            $obj->status = $post->post_status === 'publish' ? 'active' : 'inactive';
+            $coupons[] = $obj;
+        }
 
         include DSHOP_SRC_DIR . 'modules/discounts/views/coupons.php';
     }

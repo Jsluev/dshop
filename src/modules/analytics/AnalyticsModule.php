@@ -182,12 +182,14 @@ class AnalyticsModule extends BaseModule
         return $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT p.ID as id, p.post_title as name, 
+                COALESCE(pm_price.meta_value, 0) as price,
                 COALESCE(SUM(oi.quantity), 0) as sales_count,
                 COALESCE(SUM(oi.total), 0) as revenue
                 FROM {$posts_table} p
                 LEFT JOIN {$wpdb->prefix}dshop_order_items oi ON p.ID = oi.product_id
+                LEFT JOIN {$wpdb->prefix}postmeta pm_price ON p.ID = pm_price.post_id AND pm_price.meta_key = '_dshop_price'
                 WHERE p.post_type = 'dshop_product' AND p.post_status = 'publish'
-                GROUP BY p.ID
+                GROUP BY p.ID, pm_price.meta_value
                 ORDER BY sales_count DESC
                 LIMIT %d",
                 $limit

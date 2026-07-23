@@ -132,7 +132,7 @@ class IntegrationModule extends BaseModule
             exit;
         }
 
-        include DSHOP_SRC_DIR . 'modules/crm_integration/views/integrations.php';
+        include DSHOP_SRC_DIR . 'modules/CrmIntegration/views/integrations.php';
     }
 
     /**

@@ -67,6 +67,7 @@ class Database
         $this->createOrdersTable($charset_collate);
         $this->createOrderItemsTable($charset_collate);
         $this->createCustomersTable($charset_collate);
+        $this->createCustomerGroupsTable($charset_collate);
         $this->createCouponsTable($charset_collate);
         $this->createWarehousesTable($charset_collate);
         $this->createStockTable($charset_collate);
@@ -345,6 +346,29 @@ class Database
     }
 
     /**
+     * Create customer groups table
+     *
+     * @param string $charset_collate Charset collation
+     * @return void
+     */
+    private function createCustomerGroupsTable(string $charset_collate): void
+    {
+        $table = $this->tableName('customer_groups');
+
+        $sql = "CREATE TABLE {$table} (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            discount decimal(5,2) DEFAULT 0,
+            description text,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) {$charset_collate};";
+
+        dbDelta($sql);
+    }
+
+    /**
      * Create coupons table
      *
      * @param string $charset_collate Charset collation
@@ -543,6 +567,7 @@ class Database
             'orders',
             'order_items',
             'customers',
+            'customer_groups',
             'coupons',
             'warehouses',
             'stock',
