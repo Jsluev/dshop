@@ -53,6 +53,8 @@ class InventoryModule extends BaseModule
         if (is_admin()) {
             add_action('admin_menu', [$this, 'addAdminMenus']);
             add_action('add_meta_boxes', [$this, 'addMetaBoxes']);
+            add_action('admin_init', [$this, 'handleWarehouseForm']);
+            add_action('save_post_dshop_product', [$this, 'saveInventoryMetabox'], 10, 2);
         }
 
         // Order status change
@@ -106,6 +108,7 @@ class InventoryModule extends BaseModule
         $low_stock_threshold = get_option('dshop_low_stock_threshold', 5);
         ?>
         <div class="dshop-inventory-metabox">
+            <?php wp_nonce_field('dshop_inventory_data', 'dshop_inventory_nonce'); ?>
             <p>
                 <label>
                     <input type="checkbox" name="dshop_manage_stock" value="1" <?php checked($manage_stock, 1); ?>>
@@ -129,21 +132,54 @@ class InventoryModule extends BaseModule
     }
 
     /**
-     * Render warehouses page
-     *
-     * @return void
+     * Save inventory metabox data
      */
-    public function renderWarehousesPage(): void
+    public function saveInventoryMetabox(int $post_id, \WP_Post $post): void
     {
-        global $wpdb;
+        if (!isset($_POST['dshop_inventory_nonce']) ||
+            !wp_verify_nonce($_POST['dshop_inventory_nonce'], 'dshop_inventory_data')) {
+            return;
+        }
 
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+
+        if (!current_user_can('edit_post', $post_id)) {
+            return;
+        }
+
+        update_post_meta($post_id, '_dshop_manage_stock', isset($_POST['dshop_manage_stock']) ? 1 : 0);
+        update_post_meta($post_id, '_dshop_stock_quantity', absint($_POST['dshop_stock_quantity'] ?? 0));
+    }
+
+    /**
+     * Handle warehouse form and delete via admin_init
+     */
+    public function handleWarehouseForm(): void
+    {
+        if (!isset($_GET['page']) || $_GET['page'] !== 'dshop-warehouses') {
+            return;
+        }
+
+        global $wpdb;
         $table = $wpdb->prefix . 'dshop_warehouses';
-        $warehouses = $wpdb->get_results("SELECT * FROM {$table} ORDER BY priority, name");
+
+        // Handle delete
+        if (isset($_GET['delete']) && $_GET['delete'] !== '') {
+            $delete_id = absint($_GET['delete']);
+            $nonce = isset($_GET['_wpnonce']) ? sanitize_text_field($_GET['_wpnonce']) : '';
+            if ($delete_id && wp_verify_nonce($nonce, 'dshop_delete_warehouse_' . $delete_id)) {
+                $wpdb->delete($table, ['id' => $delete_id]);
+                wp_redirect(admin_url('admin.php?page=dshop-warehouses&deleted=1'));
+                exit;
+            }
+        }
 
         // Handle form submission
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dshop_warehouse_nonce'])) {
             check_admin_referer('dshop_warehouse_nonce', 'dshop_warehouse_nonce');
-            
+
             $name = sanitize_text_field($_POST['name'] ?? '');
             $address = sanitize_text_field($_POST['address'] ?? '');
             $phone = sanitize_text_field($_POST['phone'] ?? '');
@@ -178,11 +214,24 @@ class InventoryModule extends BaseModule
                         ]
                     );
                 }
-                
+
                 wp_redirect(admin_url('admin.php?page=dshop-warehouses&updated=1'));
                 exit;
             }
         }
+    }
+
+    /**
+     * Render warehouses page
+     *
+     * @return void
+     */
+    public function renderWarehousesPage(): void
+    {
+        global $wpdb;
+
+        $table = $wpdb->prefix . 'dshop_warehouses';
+        $warehouses = $wpdb->get_results("SELECT * FROM {$table} ORDER BY priority, name");
 
         include DSHOP_SRC_DIR . 'modules/inventory/views/warehouses.php';
     }

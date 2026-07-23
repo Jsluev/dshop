@@ -112,6 +112,14 @@ class CatalogModule extends BaseModule
             }
         }
 
+        // Taxonomy archive pages for products (product_category, etc.)
+        if (is_tax('dshop_product_cat') || is_tax('product_category')) {
+            $plugin_template = DSHOP_TEMPLATE_DIR . 'taxonomy-product_category.php';
+            if (file_exists($plugin_template)) {
+                return $plugin_template;
+            }
+        }
+
         // Standalone page templates for cart/checkout/catalog
         if (is_page()) {
             $page_id = get_the_ID();

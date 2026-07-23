@@ -185,7 +185,7 @@ body.dshop-page {
 .dshop-archive {
     max-width: var(--ds-max-width);
     margin: 0 auto;
-    padding: 0 24px 40px;
+    padding: 24px 24px 40px;
 }
 
 .dshop-archive__header {
@@ -195,6 +195,12 @@ body.dshop-page {
 .dshop-archive__title {
     font-size: 24px;
     font-weight: 700;
+}
+
+.dshop-archive__description {
+    margin-top: 8px;
+    color: var(--ds-text-light);
+    font-size: 15px;
 }
 
 /* ── Product Card ── */
@@ -613,6 +619,12 @@ body.dshop-page {
 
 /* ── Cart Page ── */
 
+.dshop-cart-page {
+    max-width: var(--ds-max-width);
+    margin: 0 auto;
+    padding: 24px 24px 40px;
+}
+
 .dshop-cart {
     display: grid;
     grid-template-columns: 1fr 340px;
@@ -739,6 +751,7 @@ body.dshop-page {
 
 .dshop-cart__coupon-input {
     flex: 1;
+    min-width: 0;
     padding: 8px 12px;
     border: 1px solid var(--ds-border);
     border-radius: 6px;
@@ -754,6 +767,7 @@ body.dshop-page {
     font-size: 14px;
     cursor: pointer;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .dshop-cart__coupon-button:hover {

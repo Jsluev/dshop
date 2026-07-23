@@ -60,6 +60,7 @@ class IntegrationModule extends BaseModule
         // Admin hooks
         if (is_admin()) {
             add_action('admin_menu', [$this, 'addAdminMenus']);
+            add_action('admin_init', [$this, 'handleCrmForm']);
         }
 
         // Order sync
@@ -104,13 +105,15 @@ class IntegrationModule extends BaseModule
     }
 
     /**
-     * Render integrations page
-     *
-     * @return void
+     * Handle CRM form submission (runs on admin_init before output)
      */
-    public function renderIntegrationsPage(): void
+    public function handleCrmForm(): void
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dshop_crm_nonce'])) {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['dshop_crm_nonce'])) {
+            return;
+        }
+
+        if (isset($_GET['page']) && $_GET['page'] === 'dshop-crm-integrations') {
             check_admin_referer('dshop_crm_nonce', 'dshop_crm_nonce');
 
             $crm_type = sanitize_text_field($_POST['crm_type'] ?? '');
@@ -131,7 +134,16 @@ class IntegrationModule extends BaseModule
             wp_redirect(admin_url('admin.php?page=dshop-crm-integrations&updated=1'));
             exit;
         }
+    }
 
+    /**
+     * Render integrations page
+     *
+     * @return void
+     */
+    public function renderIntegrationsPage(): void
+    {
+        $integrations = $this->integrations;
         include DSHOP_SRC_DIR . 'modules/CrmIntegration/views/integrations.php';
     }
 

@@ -8,6 +8,10 @@ defined('ABSPATH') || exit;
         <div class="notice notice-success is-dismissible"><p>Склад сохранён.</p></div>
     <?php endif; ?>
 
+    <?php if (isset($_GET['deleted'])): ?>
+        <div class="notice notice-success is-dismissible"><p>Склад удалён.</p></div>
+    <?php endif; ?>
+
     <div class="dshop-warehouses">
         <div class="dshop-warehouses__list">
             <table class="wp-list-table widefat fixed striped">
@@ -30,7 +34,10 @@ defined('ABSPATH') || exit;
                                 <td><?php echo esc_html($warehouse->address); ?></td>
                                 <td><?php echo esc_html($warehouse->phone); ?></td>
                                 <td><?php echo $warehouse->is_default ? '&#10004;' : ''; ?></td>
-                                <td><a href="?page=dshop-warehouses&edit=<?php echo esc_attr($warehouse->id); ?>" class="button button-small">Редактировать</a></td>
+                                <td>
+                                    <a href="?page=dshop-warehouses&edit=<?php echo esc_attr($warehouse->id); ?>" class="button button-small">Редактировать</a>
+                                    <a href="<?php echo wp_nonce_url(admin_url('admin.php?page=dshop-warehouses&delete=' . $warehouse->id), 'dshop_delete_warehouse_' . $warehouse->id); ?>" class="button button-small" onclick="return confirm('Удалить склад?')">Удалить</a>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

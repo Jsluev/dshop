@@ -371,6 +371,7 @@ class SeoModule extends BaseModule
         $seo_description = get_post_meta($post->ID, '_dshop_seo_description', true);
         ?>
         <div class="dshop-seo-metabox">
+            <?php wp_nonce_field('dshop_seo_data', 'dshop_seo_nonce'); ?>
             <p>
                 <label for="dshop_seo_title"><?php echo 'SEO Title'; ?></label>
                 <input type="text" id="dshop_seo_title" name="dshop_seo_title" value="<?php echo esc_attr($seo_title); ?>" class="widefat" placeholder="<?php echo 'Оставьте пустым для значения по умолчанию'; ?>">
