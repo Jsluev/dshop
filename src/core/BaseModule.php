@@ -165,6 +165,7 @@ abstract class BaseModule implements ModuleInterface, HookableInterface
     protected function loadSettings(): void
     {
         $this->settings = get_option("dshop_module_{$this->name}_settings", []);
+        $this->active = (bool) get_option("dshop_module_{$this->name}_active", true);
     }
 
     /**
